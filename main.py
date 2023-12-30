@@ -26,11 +26,6 @@ intents = discord.Intents.default()
 client = discord.Client(intents=intents)
 tree = app_commands.CommandTree(client)
 
-@client.event
-async def on_ready():
-    print('Logged in as {}'.format(client.user))
-
-
 def log_message(message):
     try:
         logger.info(f"Message in {message.channel.guild.name}/{message.channel.name} by {message.author.name}: {message.content}")
@@ -38,17 +33,20 @@ def log_message(message):
         logger.info(f"Message by {message.author.name}: {message.content}")
 
 
+def format_contest(c):
+        t = time.time()
+        at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c['startTimeSeconds']))
+        rh = (c['startTimeSeconds']-t)// 3600
+        rm = (c['startTimeSeconds']-t)% 3600 // 60
+        dh = c['durationSeconds']// 3600
+        dm = c['durationSeconds']% 3600 // 60
+        return f"- {c['name']} in {rh}h{str(rm).zfill(2)}m, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
+
 def contest_msg():
     contests = codeforces.get_upcoming_contests()
     res = f"There are {len(contests)} contests\n"
-    t = time.time()
     for c in contests:
-        at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(t-c['relativeTimeSeconds']))
-        rh = -c['relativeTimeSeconds']// 3600
-        rm = -c['relativeTimeSeconds']% 3600 // 60
-        dh = c['durationSeconds']// 3600
-        dm = c['durationSeconds']% 3600 // 60
-        res += f"- {c['name']} in {rh}h{str(rm).zfill(2)}m, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
+        res += format_contest(c)
     return res
 
 @client.event 
@@ -61,9 +59,39 @@ async def on_message(message):
         await message.channel.send("Hello my ducklings.")
     if 'contests' in msg:
         await message.channel.send(contest_msg())
-        
+    if 'info' in msg:
+        await message.channel.send('Check me at https://github.com/pokorj54/kACer')
+    
+from discord.ext import tasks
 
+PREV_CONTESTS = None
 
+@tasks.loop(seconds=3600)
+async def contest_monitoring(channel):
+    global PREV_CONTESTS
+    contests = codeforces.get_unfinished_contests()
+    [c.pop('relativeTimeSeconds') for c in contests]
+    if PREV_CONTESTS is None:
+        PREV_CONTESTS = contests
+        return
+    for c in contests:
+        if c not in PREV_CONTESTS:
+            await channel.send('New contest appeared\n'+format_contest(c))
+    for c in PREV_CONTESTS:
+        if c['phase'] == 'SYSTEM_TEST' and c not in contests:
+            await channel.send('Contest tests completed\n'+format_contest(c))
+    PREV_CONTESTS = contests
+
+@client.event
+async def on_ready():
+    print('Logged in as {}'.format(client.user))
+    contest_monitoring.start(client.get_channel(920263329585459220))
+
+# TODO contest notifications
+# TODO config
+# TODO better logging
+
+# TODO slash commands
 # Add the guild ids in which the slash command will appear.
 # If it should be in all, remove the argument, but note that
 # it will take some time (up to an hour) to register the
