@@ -24,7 +24,7 @@ TOKEN = my_secret_token.get_token()
 
 intents = discord.Intents.default()
 client = discord.Client(intents=intents)
-tree = app_commands.CommandTree(client)
+# tree = app_commands.CommandTree(client)
 
 def log_message(message):
     try:
