@@ -36,10 +36,10 @@ def log_message(message):
 def format_contest(c):
         t = time.time()
         at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c['startTimeSeconds']))
-        rh = (c['startTimeSeconds']-t)// 3600
-        rm = (c['startTimeSeconds']-t)% 3600 // 60
-        dh = c['durationSeconds']// 3600
-        dm = c['durationSeconds']% 3600 // 60
+        rh = int((c['startTimeSeconds']-t)// 3600)
+        rm = int((c['startTimeSeconds']-t)% 3600 // 60)
+        dh = int(c['durationSeconds']// 3600)
+        dm = int(c['durationSeconds']% 3600 // 60)
         return f"- {c['name']} in {rh}h{str(rm).zfill(2)}m, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
 
 def contest_msg():
@@ -65,10 +65,12 @@ async def on_message(message):
 from discord.ext import tasks
 
 PREV_CONTESTS = None
+ANNOUNCED = set()
 
-@tasks.loop(seconds=3600)
+@tasks.loop(seconds=60)
 async def contest_monitoring(channel):
     global PREV_CONTESTS
+    global ANNOUNCED
     contests = codeforces.get_unfinished_contests()
     [c.pop('relativeTimeSeconds') for c in contests]
     if PREV_CONTESTS is None:
@@ -77,6 +79,8 @@ async def contest_monitoring(channel):
     for c in contests:
         if c not in PREV_CONTESTS:
             await channel.send('New contest appeared\n'+format_contest(c))
+        if  time.time() < c['startTimeSeconds'] < time.time()+3600 and c['id'] not in ANNOUNCED:
+            await channel.send('Contest in less than 1 hour\n'+format_contest(c))
     for c in PREV_CONTESTS:
         if c['phase'] == 'SYSTEM_TEST' and c not in contests:
             await channel.send('Contest tests completed\n'+format_contest(c))
@@ -87,7 +91,6 @@ async def on_ready():
     print('Logged in as {}'.format(client.user))
     contest_monitoring.start(client.get_channel(920263329585459220))
 
-# TODO contest notifications
 # TODO config
 # TODO better logging
 
