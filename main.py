@@ -54,7 +54,6 @@ async def on_message(message):
     msg = str(message.content).lower()
     if msg == '' or message.author == client.user:
         return
-    print(msg)
     if 'hello' in msg:
         await message.channel.send("Hello my ducklings.")
     if 'contests' in msg:
