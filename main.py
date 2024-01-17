@@ -64,7 +64,8 @@ async def on_message(message):
 from discord.ext import tasks
 
 PREV_CONTESTS = None
-ANNOUNCED = set()
+ANNOUNCED = dict()
+NOTIFICATION_TIME = [24*60*60, 60*60, 60*5]
 
 @tasks.loop(seconds=60)
 async def contest_monitoring(channel):
@@ -78,8 +79,10 @@ async def contest_monitoring(channel):
     for c in contests:
         if c not in PREV_CONTESTS:
             await channel.send('New contest appeared\n'+format_contest(c))
-        if  time.time() < c['startTimeSeconds'] < time.time()+3600 and c['id'] not in ANNOUNCED:
-            await channel.send('Contest in less than 1 hour\n'+format_contest(c))
+        for i,t in enumerate(NOTIFICATION_TIME):
+            if  time.time() < c['startTimeSeconds'] < time.time()+t and (c['id'] not in ANNOUNCED or ANNOUNCED[c['id'] < i] ):
+                await channel.send('Contest soon:\n'+format_contest(c))
+                ANNOUNCED[c['id']] = i
     for c in PREV_CONTESTS:
         if c['phase'] == 'SYSTEM_TEST' and c not in contests:
             await channel.send('Contest tests completed\n'+format_contest(c))
