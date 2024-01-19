@@ -5,8 +5,17 @@ import discord
 # from discord import app_commands
 import my_secret_token
 import codeforces
+import json
 
 LOG_FOLDER = ".local"
+
+def load_json_file(filename):
+    data = dict()
+    with open(filename) as file:
+        data = json.load(file)
+    return data
+
+CONFIG = load_json_file("config.json")
 
 def init():
     if not os.path.exists(LOG_FOLDER):
@@ -56,7 +65,7 @@ async def on_message(message):
         return
     if 'hello' in msg:
         await message.channel.send("Hello my ducklings.")
-    if 'contests' in msg:
+    if 'contest' in msg:
         await message.channel.send(contest_msg())
     if 'info' in msg:
         await message.channel.send('Check me at https://github.com/pokorj54/kACer')
@@ -65,9 +74,8 @@ from discord.ext import tasks
 
 PREV_CONTESTS = None
 ANNOUNCED = dict()
-NOTIFICATION_TIME = [24*60*60, 60*60, 60*5]
 
-@tasks.loop(seconds=60)
+@tasks.loop(seconds=CONFIG['refresh_rate'])
 async def contest_monitoring(channel):
     global PREV_CONTESTS
     global ANNOUNCED
@@ -79,8 +87,8 @@ async def contest_monitoring(channel):
     for c in contests:
         if c not in PREV_CONTESTS:
             await channel.send('New contest appeared\n'+format_contest(c))
-        for i,t in enumerate(NOTIFICATION_TIME):
-            if  time.time() < c['startTimeSeconds'] < time.time()+t and (c['id'] not in ANNOUNCED or ANNOUNCED[c['id'] < i] ):
+        for i,t in enumerate(CONFIG['notification_durations']):
+            if  time.time() < c['startTimeSeconds'] < time.time()+t and (c['id'] not in ANNOUNCED or ANNOUNCED[c['id'] > i] ):
                 await channel.send('Contest soon:\n'+format_contest(c))
                 ANNOUNCED[c['id']] = i
     for c in PREV_CONTESTS:
@@ -91,9 +99,8 @@ async def contest_monitoring(channel):
 @client.event
 async def on_ready():
     print('Logged in as {}'.format(client.user))
-    contest_monitoring.start(client.get_channel(920263329585459220))
+    contest_monitoring.start(client.get_channel(CONFIG['channels']['codeforces']))
 
-# TODO config
 # TODO better logging
 
 # TODO slash commands
