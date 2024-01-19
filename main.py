@@ -121,6 +121,8 @@ async def on_ready():
     contest_monitoring.start(client.get_channel(CONFIG['channels']['codeforces']))
     euler_monitoring.start(client.get_channel(CONFIG['channels']['euler']))
 
+# TODO polymorphism and better encapsulation
+# TODO Euler prompts and notifications https://pfischbeck.de/en/posts/projecteuler-api/
 # TODO better logging
 
 # TODO slash commands
