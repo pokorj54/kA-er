@@ -5,6 +5,7 @@ import discord
 # from discord import app_commands
 import my_secret_token
 import codeforces
+import euler
 import json
 
 LOG_FOLDER = ".local"
@@ -96,10 +97,29 @@ async def contest_monitoring(channel):
             await channel.send('Contest tests completed\n'+format_contest(c))
     PREV_CONTESTS = contests
 
+
+def format_euler_item(c):
+    return f"Title: {c['title']}\nLink: {c['link']}\nDesription: {c['description']}"
+
+PREV_ITEMS=None
+
+@tasks.loop(seconds=CONFIG['refresh_rate'])
+async def euler_monitoring(channel):
+    global PREV_ITEMS
+    items = euler.get_items()
+    if PREV_ITEMS is None:
+        PREV_ITEMS = items
+        return
+    for i in items:
+        if i not in PREV_ITEMS:
+            await channel.send('New update appeared\n'+format_euler_item(i))
+    PREV_ITEMS = items
+
 @client.event
 async def on_ready():
     print('Logged in as {}'.format(client.user))
     contest_monitoring.start(client.get_channel(CONFIG['channels']['codeforces']))
+    euler_monitoring.start(client.get_channel(CONFIG['channels']['euler']))
 
 # TODO better logging
 
