@@ -62,6 +62,13 @@ def upcoming(source):
         res += format_contest(upcoming[u]) 
     return res
 
+def help_message():
+    msg = "I am kAČer - your coach!\nI support these commands(you have to always tag me):\n"
+    for source in sources:
+        msg += "- " + source + "\n"
+    msg += 'You can also find me on Github and contribute - use "info"'
+    return msg
+
 @client.event 
 async def on_message(message):
     msg = str(message.content).lower()
@@ -71,6 +78,8 @@ async def on_message(message):
         await message.channel.send("Hello my ducklings.")
     if 'info' in msg:
         await message.channel.send('Check me at https://github.com/pokorj54/kACer')
+    if 'help' in msg or 'list' in msg:
+        await message.channel.send(help_message())
     for source in sources:
         if source in msg:
             await message.channel.send(upcoming(sources[source]))
