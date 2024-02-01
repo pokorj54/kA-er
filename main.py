@@ -43,20 +43,23 @@ def log_message(message):
         logger.info(f"Message by {message.author.name}: {message.content}")
 
 
-def format_contest(c):
-        t = time.time()
-        at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c['startTimeSeconds']))
-        rh = int((c['startTimeSeconds']-t)// 3600)
-        rm = int((c['startTimeSeconds']-t)% 3600 // 60)
-        dh = int(c['durationSeconds']// 3600)
-        dm = int(c['durationSeconds']% 3600 // 60)
-        return f"- {c['name']} in {rh}h{str(rm).zfill(2)}m, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
+sources = {
+    "euler": euler.Euler(),
+    "codeforces": codeforces.Codeforces(),
+}
 
-def contest_msg():
-    contests = codeforces.get_upcoming_contests()
-    res = f"There are {len(contests)} contests\n"
-    for c in contests:
-        res += format_contest(c)
+def format_contest(c):
+    t = time.time()
+    at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c[0]))
+    rh = int((c[0]-t)// 3600)
+    rm = int((c[0]-t)% 3600 // 60)
+    return f"- {c[1]} in {rh}h{str(rm).zfill(2)}m, at {at}\n"
+
+def upcoming(source):
+    upcoming = source.get_upcoming()
+    res = f"There are {len(upcoming)} upcoming events\n"
+    for u in upcoming:
+        res += format_contest(upcoming[u]) 
     return res
 
 @client.event 
@@ -66,63 +69,51 @@ async def on_message(message):
         return
     if 'hello' in msg:
         await message.channel.send("Hello my ducklings.")
-    if 'contest' in msg:
-        await message.channel.send(contest_msg())
     if 'info' in msg:
         await message.channel.send('Check me at https://github.com/pokorj54/kACer')
+    for source in sources:
+        if source in msg:
+            await message.channel.send(upcoming(sources[source]))
+            
     
 from discord.ext import tasks
 
-PREV_CONTESTS = None
+#TODO get rid of this global object
 ANNOUNCED = dict()
 
-@tasks.loop(seconds=CONFIG['refresh_rate'])
-async def contest_monitoring(channel):
-    global PREV_CONTESTS
+async def news_monitoring(channel, source):
+    news = source.get_news()
+    for msg in news:
+        await channel.send(msg)
+
+async def upcoming_monitoring(channel, source):
     global ANNOUNCED
-    contests = codeforces.get_unfinished_contests()
-    [c.pop('relativeTimeSeconds') for c in contests]
-    if PREV_CONTESTS is None:
-        PREV_CONTESTS = contests
-        return
-    for c in contests:
-        if c not in PREV_CONTESTS:
-            await channel.send('New contest appeared\n'+format_contest(c))
+    upcoming = source.get_upcoming()
+    for u in upcoming:
         for i,t in enumerate(CONFIG['notification_durations']):
-            if  time.time() < c['startTimeSeconds'] < time.time()+t and (c['id'] not in ANNOUNCED or ANNOUNCED[c['id'] > i] ):
-                await channel.send('Contest soon:\n'+format_contest(c))
-                ANNOUNCED[c['id']] = i
-    for c in PREV_CONTESTS:
-        if c['phase'] == 'SYSTEM_TEST' and c not in contests:
-            await channel.send('Contest tests completed\n'+format_contest(c))
-    PREV_CONTESTS = contests
+            ut = upcoming[u][0]
+            if  time.time() < ut < time.time()+t and (u not in ANNOUNCED or ANNOUNCED[u> i] ):
+                await channel.send('Coming soon:\n'+format_contest(upcoming[u]))
+                ANNOUNCED[u] = i
 
-
-def format_euler_item(c):
-    return f"Title: {c['title']}\nLink: {c['link']}\nDesription: {c['description']}"
-
-PREV_ITEMS=None
 
 @tasks.loop(seconds=CONFIG['refresh_rate'])
-async def euler_monitoring(channel):
-    global PREV_ITEMS
-    items = euler.get_items()
-    if PREV_ITEMS is None:
-        PREV_ITEMS = items
-        return
-    for i in items:
-        if i not in PREV_ITEMS:
-            await channel.send('New update appeared\n'+format_euler_item(i))
-    PREV_ITEMS = items
+async def monitoring():
+    await news_monitoring(client.get_channel(CONFIG['channels']['codeforces']), sources["codeforces"])
+    await news_monitoring(client.get_channel(CONFIG['channels']['euler']), sources["euler"])
+    await upcoming_monitoring(client.get_channel(CONFIG['channels']['codeforces']), sources["codeforces"])
+    await upcoming_monitoring(client.get_channel(CONFIG['channels']['euler']), sources["euler"])
+
+def ignore_old_news():
+    for source in sources:
+        sources[source].get_news()
 
 @client.event
 async def on_ready():
     print('Logged in as {}'.format(client.user))
-    contest_monitoring.start(client.get_channel(CONFIG['channels']['codeforces']))
-    euler_monitoring.start(client.get_channel(CONFIG['channels']['euler']))
+    ignore_old_news()
+    monitoring.start()
 
-# TODO polymorphism and better encapsulation
-# TODO Euler prompts and notifications https://pfischbeck.de/en/posts/projecteuler-api/
 # TODO better logging
 
 # TODO slash commands

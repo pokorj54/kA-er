@@ -2,7 +2,7 @@
     "notification_durations":[300, 3600, 86400],
     "channels":{
         "codeforces": 920263329585459220,
-        "euler": 920263329585459220
+        "euler": 1193503984711905280
     },
     "refresh_rate": 60
 }
