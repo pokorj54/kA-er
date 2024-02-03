@@ -101,7 +101,7 @@ async def upcoming_monitoring(channel, source):
     for u in upcoming:
         for i,t in enumerate(CONFIG['notification_durations']):
             ut = upcoming[u][0]
-            if  time.time() < ut < time.time()+t and (u not in ANNOUNCED or ANNOUNCED[u> i] ):
+            if  time.time() < ut < time.time()+t and (u not in ANNOUNCED or ANNOUNCED[u] > i):
                 await channel.send('Coming soon:\n'+format_contest(upcoming[u]))
                 ANNOUNCED[u] = i
 
