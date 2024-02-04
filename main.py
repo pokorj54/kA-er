@@ -51,9 +51,7 @@ sources = {
 def format_contest(c):
     t = time.time()
     at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c[0]))
-    rh = int((c[0]-t)// 3600)
-    rm = int((c[0]-t)% 3600 // 60)
-    return f"- {c[1]} in {rh}h{str(rm).zfill(2)}m, at {at}\n"
+    return f"- {c[1]} in <t:{c[0]}:R>, at {at}\n"
 
 def upcoming(source):
     upcoming = source.get_upcoming()

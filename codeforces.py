@@ -27,11 +27,9 @@ class Codeforces(source.Source):
             if c['phase'] == "BEFORE":
                 t = time.time()
                 at = time.strftime('%Y-%m-%d %H:%M %Z', time.localtime(c['startTimeSeconds']))
-                rh = int((c['startTimeSeconds']-t)// 3600)
-                rm = int((c['startTimeSeconds']-t)% 3600 // 60)
                 dh = int(c['durationSeconds']// 3600)
                 dm = int(c['durationSeconds']% 3600 // 60)
-                msg = f"- {c['name']} in {rh}h{str(rm).zfill(2)}m, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
+                msg = f"- {c['name']} in <t:{c['startTimeSeconds']}:R>, at {at}, duration {dh}:{str(dm).zfill(2)}\n"
             else:
                 msg = f"{c['name']} phase changed to {c['phase']}"
             res[(c['id'],c['phase'])] = msg
